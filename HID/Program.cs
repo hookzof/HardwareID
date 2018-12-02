@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Management;
@@ -10,10 +7,10 @@ using System.Collections;
 
 namespace HID
 {
-    class Program
+    internal class Program
     {
         [DllImport("iphlpapi.dll", CharSet = CharSet.Ansi)]
-        public static extern int GetAdaptersInfo(IntPtr intptr_0, ref long long_0);
+        public static extern int GetAdaptersInfo(IntPtr intptr0, ref long long0);
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct IpAddrString
@@ -25,33 +22,34 @@ namespace HID
             internal string IpMask;
             internal uint Context;
         }
+
         internal struct IpAdapterInfo
         {
-            internal const int MAX_ADAPTER_DESCRIPTION_LENGTH = 0x80;
-            internal const int MAX_ADAPTER_NAME_LENGTH = 0x100;
-            internal const int MAX_ADAPTER_ADDRESS_LENGTH = 8;
+            internal const int MaxAdapterDescriptionLength = 0x80;
+            internal const int MaxAdapterNameLength = 0x100;
+            internal const int MaxAdapterAddressLength = 8;
             internal IntPtr Next;
-            internal uint comboIndex;
+            internal uint ComboIndex;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-            internal string adapterName;
+            internal string AdapterName;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 0x84)]
-            internal string description;
-            internal uint addressLength;
+            internal string Description;
+            internal uint AddressLength;
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-            internal byte[] address;
-            internal uint index;
-            internal OldInterfaceType type;
-            internal bool dhcpEnabled;
-            internal IntPtr currentIpAddress;
-            internal IpAddrString ipAddressList;
-            internal IpAddrString gatewayList;
-            internal IpAddrString dhcpServer;
+            internal byte[] Address;
+            internal uint Index;
+            internal OldInterfaceType Type;
+            internal bool DhcpEnabled;
+            internal IntPtr CurrentIpAddress;
+            internal IpAddrString IpAddressList;
+            internal IpAddrString GatewayList;
+            internal IpAddrString DhcpServer;
             [MarshalAs(UnmanagedType.Bool)]
-            internal bool haveWins;
-            internal IpAddrString primaryWinsServer;
-            internal IpAddrString secondaryWinsServer;
-            internal uint leaseObtained;
-            internal uint leaseExpires;
+            internal bool HaveWins;
+            internal IpAddrString PrimaryWinsServer;
+            internal IpAddrString SecondaryWinsServer;
+            internal uint LeaseObtained;
+            internal uint LeaseExpires;
         }
 
         internal enum OldInterfaceType
@@ -65,14 +63,22 @@ namespace HID
             Unknown = 0
         }
 
-        internal static string GetMAC()
+        private static void Main()
         {
-            string text = string.Empty;
+            var value = GenerateHwid(true, false, true, false);
+
+            Console.WriteLine(value);
+            Console.ReadKey();
+        }
+
+        internal static string GetMac()
+        {
+            var text = string.Empty;
             try
             {
-                long value = (long)Marshal.SizeOf(typeof(IpAdapterInfo));
-                IntPtr intPtr = Marshal.AllocHGlobal(new IntPtr(value));
-                int adaptersInfo = GetAdaptersInfo(intPtr, ref value);
+                var value = (long)Marshal.SizeOf(typeof(IpAdapterInfo));
+                var intPtr = Marshal.AllocHGlobal(new IntPtr(value));
+                var adaptersInfo = GetAdaptersInfo(intPtr, ref value);
                 if (adaptersInfo == 111)
                 {
                     intPtr = Marshal.ReAllocHGlobal(intPtr, new IntPtr(value));
@@ -80,11 +86,11 @@ namespace HID
                 }
                 if (adaptersInfo == 0)
                 {
-                    IntPtr ptr = intPtr;
-                    IpAdapterInfo IpAdapterInfo = (IpAdapterInfo)Marshal.PtrToStructure(ptr, typeof(IpAdapterInfo));
-                    for (int i = 0; (long)i < (long)((ulong)IpAdapterInfo.addressLength); i++)
+                    var ptr = intPtr;
+                    var ipAdapterInfo = (IpAdapterInfo)Marshal.PtrToStructure(ptr, typeof(IpAdapterInfo));
+                    for (var i = 0; i < (long)(ulong)ipAdapterInfo.AddressLength; i++)
                     {
-                        text = string.Concat(text, IpAdapterInfo.address[i].ToString("X2"));
+                        text = string.Concat(text, ipAdapterInfo.Address[i].ToString("X2"));
                     }
                     Marshal.FreeHGlobal(intPtr);
                 }
@@ -95,7 +101,9 @@ namespace HID
             }
             catch
             {
+                // ignored
             }
+
             if (text == string.Empty)
             {
                 text = "";
@@ -103,59 +111,60 @@ namespace HID
             return text;
         }
 
-        private static string GetProcessorID()
+        private static string GetProcessorId()
         {
-            string text = string.Empty;
+            var text = string.Empty;
             try
             {
-                ManagementClass managementClass = new ManagementClass("Win32_Processor");
-                ManagementObjectCollection instances = managementClass.GetInstances();
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = instances.GetEnumerator())
+                var managementClass = new ManagementClass("Win32_Processor");
+                var instances = managementClass.GetInstances();
+                using (var enumerator = instances.GetEnumerator())
                 {
                     while (enumerator.MoveNext())
                     {
-                        ManagementObject managementObject = (ManagementObject)enumerator.Current;
-                        if (text == string.Empty)
+                        var managementObject = (ManagementObject)enumerator.Current;
+                        if (text != string.Empty) continue;
+                        try
                         {
-                            try
+                            text = managementObject.Properties["ProcessorId"].Value.ToString();
+                            if (text.Length != 0)
                             {
-                                text = managementObject.Properties["ProcessorId"].Value.ToString();
-                                if (text.Length != 0)
-                                {
-                                    break;
-                                }
-                                text = string.Empty;
+                                break;
                             }
-                            catch
-                            {
-                            }
+                            text = string.Empty;
+                        }
+                        catch
+                        {
+                            // ignored
                         }
                     }
                 }
             }
             catch
             {
+                // ignored
             }
+
             return text;
         }
 
-        private static string GetMACAddress()
+        private static string GetMacAddress()
         {
-            string text = String.Empty;
+            var text = string.Empty;
             try
             {
-                text = GetMAC();
+                text = GetMac();
                 if (text.Length == 0)
                 {
                     text = string.Empty;
-                    ManagementClass managementClass = new ManagementClass("Win32_NetworkAdapterConfiguration");
-                    ManagementObjectCollection instances = managementClass.GetInstances();
-                    using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = instances.GetEnumerator())
+                    var managementClass = new ManagementClass("Win32_NetworkAdapterConfiguration");
+                    var instances = managementClass.GetInstances();
+                    using (var enumerator = instances.GetEnumerator())
                     {
                         while (enumerator.MoveNext())
                         {
-                            ManagementObject managementObject = (ManagementObject)enumerator.Current;
-                            if (!(text == string.Empty))
+                            var managementObject = (ManagementObject)enumerator.Current;
+                            if (text != string.Empty)
                             {
                                 break;
                             }
@@ -169,6 +178,7 @@ namespace HID
                             }
                             catch
                             {
+                                // ignored
                             }
                         }
                     }
@@ -176,26 +186,21 @@ namespace HID
             }
             catch
             {
+                // ignored
             }
+
             return text;
         }
 
-        private static string GetMotherBoardID()
+        private static string GetMotherBoardId()
         {
             try
             {
-                return string.Concat(new string[]
-                {
-                    GetProduct(),
-                    "-",
-                    GetManufacturer(),
-                    "-",
-                    GetSerialNumber()
-                });
+                return string.Concat(GetProduct(), "-", GetManufacturer(), "-", GetSerialNumber());
             }
             catch
             {
-                return String.Empty;
+                return string.Empty;
             }
         }
 
@@ -204,28 +209,29 @@ namespace HID
             string result;
             try
             {
-                string text = String.Empty;
-                ManagementClass managementClass = new ManagementClass("Win32_BaseBoard");
-                ManagementObjectCollection instances = managementClass.GetInstances();
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = instances.GetEnumerator())
+                var text = string.Empty;
+                var managementClass = new ManagementClass("Win32_BaseBoard");
+                var instances = managementClass.GetInstances();
+                using (var enumerator = instances.GetEnumerator())
                 {
                     while (enumerator.MoveNext())
                     {
-                        ManagementObject managementObject = (ManagementObject)enumerator.Current;
+                        var managementObject = (ManagementObject)enumerator.Current;
                         try
                         {
-                            if (text == string.Empty && managementObject.Properties["Manufacturer"] != null && managementObject.Properties["Manufacturer"].Value != null)
+                            if (text == string.Empty && managementObject.Properties["Manufacturer"].Value != null)
                             {
                                 text = managementObject.Properties["Manufacturer"].Value.ToString();
                                 if (text.Length != 0)
                                 {
                                     break;
                                 }
-                                text = String.Empty;
+                                text = string.Empty;
                             }
                         }
                         catch
                         {
+                            // ignored
                         }
                     }
                 }
@@ -233,7 +239,7 @@ namespace HID
             }
             catch
             {
-                result = String.Empty;
+                result = string.Empty;
             }
             return result;
         }
@@ -243,28 +249,29 @@ namespace HID
             string result;
             try
             {
-                string text = String.Empty;
-                ManagementClass managementClass = new ManagementClass("Win32_BaseBoard");
-                ManagementObjectCollection instances = managementClass.GetInstances();
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = instances.GetEnumerator())
+                var text = string.Empty;
+                var managementClass = new ManagementClass("Win32_BaseBoard");
+                var instances = managementClass.GetInstances();
+                using (var enumerator = instances.GetEnumerator())
                 {
                     while (enumerator.MoveNext())
                     {
-                        ManagementObject managementObject = (ManagementObject)enumerator.Current;
+                        var managementObject = (ManagementObject)enumerator.Current;
                         try
                         {
-                            if (text == string.Empty && managementObject.Properties["SerialNumber"] != null && managementObject.Properties["SerialNumber"].Value != null)
+                            if (text == string.Empty && managementObject.Properties["SerialNumber"].Value != null)
                             {
                                 text = managementObject.Properties["SerialNumber"].Value.ToString();
                                 if (text.Length != 0)
                                 {
                                     break;
                                 }
-                                text = String.Empty;
+                                text = string.Empty;
                             }
                         }
                         catch
                         {
+                            // ignored
                         }
                     }
                 }
@@ -272,37 +279,39 @@ namespace HID
             }
             catch
             {
-                result = String.Empty;
+                result = string.Empty;
             }
             return result;
         }
+
         private static string GetProduct()
         {
             string result;
             try
             {
-                string text = String.Empty;
-                ManagementClass managementClass = new ManagementClass("Win32_BaseBoard");
-                ManagementObjectCollection instances = managementClass.GetInstances();
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = instances.GetEnumerator())
+                var text = string.Empty;
+                var managementClass = new ManagementClass("Win32_BaseBoard");
+                var instances = managementClass.GetInstances();
+                using (var enumerator = instances.GetEnumerator())
                 {
                     while (enumerator.MoveNext())
                     {
-                        ManagementObject managementObject = (ManagementObject)enumerator.Current;
+                        var managementObject = (ManagementObject)enumerator.Current;
                         try
                         {
-                            if (managementObject.Properties["Product"] != null && managementObject.Properties["Product"].Value != null && text == string.Empty)
+                            if (managementObject.Properties["Product"].Value != null && text == string.Empty)
                             {
                                 text = managementObject.Properties["Product"].Value.ToString();
                                 if (text.Length != 0)
                                 {
                                     break;
                                 }
-                                text = String.Empty;
+                                text = string.Empty;
                             }
                         }
                         catch
                         {
+                            // ignored
                         }
                     }
                 }
@@ -310,85 +319,72 @@ namespace HID
             }
             catch
             {
-                result = String.Empty;
+                result = string.Empty;
             }
             return result;
         }
 
-        private static string GetDiskID()
+        private static string GetDiskId()
         {
             try
             {
-                ArrayList arrayList = new ArrayList();
-                ManagementObjectSearcher managementObjectSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_DiskDrive");
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = managementObjectSearcher.Get().GetEnumerator())
+                var arrayList = new ArrayList();
+                var managementObjectSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_DiskDrive");
+                using (var enumerator = managementObjectSearcher.Get().GetEnumerator())
                 {
                     while (enumerator.MoveNext())
                     {
-                        ManagementObject managementObject = (ManagementObject)enumerator.Current;
-                        if (managementObject["DeviceID"] != null && managementObject["InterfaceType"] != null && managementObject["InterfaceType"].ToString() != "USB" && managementObject["InterfaceType"].ToString() != "1394")
+                        var managementObject = (ManagementObject)enumerator.Current;
+                        if (managementObject["DeviceID"] == null || managementObject["InterfaceType"] == null ||
+                            managementObject["InterfaceType"].ToString() == "USB" ||
+                            managementObject["InterfaceType"].ToString() == "1394") continue;
+                        var flag = !(managementObject["MediaType"] != null && managementObject["MediaType"].ToString() == "Removable Media");
+                        if (!flag) continue;
+                        var obj = managementObject["SerialNumber"];
+                        if (obj != null && obj.ToString().Trim() != string.Empty && obj.ToString()[0] != Convert.ToChar(31))
                         {
-                            bool flag = true;
-                            if (managementObject["MediaType"] != null && managementObject["MediaType"].ToString() == "Removable Media")
-                            {
-                                flag = false;
-                            }
-                            if (flag)
-                            {
-                                if (managementObject["SerialNumber"] != null)
-                                {
-                                    object obj = managementObject["SerialNumber"];
-                                    if (obj != null && !(obj.ToString().Trim() == string.Empty) && obj.ToString()[0] != Convert.ToChar(31))
-                                    {
-                                        return obj.ToString().Trim();
-                                    }
-                                }
-                                arrayList.Add(managementObject["DeviceID"].ToString());
-                            }
+                            return obj.ToString().Trim();
                         }
+                        arrayList.Add(managementObject["DeviceID"].ToString());
                     }
                 }
                 managementObjectSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_PhysicalMedia");
-                ManagementObjectCollection managementObjectCollection = managementObjectSearcher.Get();
+                var managementObjectCollection = managementObjectSearcher.Get();
                 foreach (string b in arrayList)
                 {
-                    using (ManagementObjectCollection.ManagementObjectEnumerator enumerator3 = managementObjectCollection.GetEnumerator())
+                    using (var enumerator3 = managementObjectCollection.GetEnumerator())
                     {
                         while (enumerator3.MoveNext())
                         {
-                            ManagementObject managementObject2 = (ManagementObject)enumerator3.Current;
-                            if (managementObject2["Tag"] != null)
+                            var managementObject2 = (ManagementObject)enumerator3.Current;
+                            if (managementObject2["Tag"] == null) continue;
+                            var a = managementObject2["Tag"].ToString();
+                            if (a != b || managementObject2["SerialNumber"] == null) continue;
+                            var obj2 = managementObject2["SerialNumber"];
+                            if (obj2 != null && obj2.ToString() != string.Empty && obj2.ToString()[0] != Convert.ToChar(31))
                             {
-                                string a = managementObject2["Tag"].ToString();
-                                if (a == b && managementObject2["SerialNumber"] != null)
-                                {
-                                    object obj2 = managementObject2["SerialNumber"];
-                                    if (obj2 != null && !(obj2.ToString() == string.Empty) && obj2.ToString()[0] != Convert.ToChar(31))
-                                    {
-                                        return obj2.ToString().Trim().Replace(" ", "");
-                                    }
-                                    break;
-                                }
+                                return obj2.ToString().Trim().Replace(" ", "");
                             }
+                            break;
                         }
                     }
                 }
             }
             catch
             {
-                return String.Empty;
+                return string.Empty;
             }
-            return String.Empty;
+            return string.Empty;
         }
 
-        internal static string GenerateHWID(bool bool_7, bool bool_8, bool bool_9, bool bool_10)
+        internal static string GenerateHwid(bool proccessor, bool mac, bool motherboard, bool disk)
         {
-            string text = "";
+            var text = "";
             RSACryptoServiceProvider.UseMachineKeyStore = true;
-            MD5 md5 = MD5.Create();
-            if (bool_7)
+            var md5 = MD5.Create();
+            if (proccessor)
             {
-                byte[] array = md5.ComputeHash(Encoding.Unicode.GetBytes(GetProcessorID()));
+                var array = md5.ComputeHash(Encoding.Unicode.GetBytes(GetProcessorId()));
                 text += array[3].ToString("X2");
                 text = text + array[11].ToString("X2") + "-";
             }
@@ -396,56 +392,45 @@ namespace HID
             {
                 text = "85C1-";
             }
-            if (bool_8)
+            if (mac)
             {
-                byte[] array2 = md5.ComputeHash(Encoding.Unicode.GetBytes(GetMACAddress()));
+                var array2 = md5.ComputeHash(Encoding.Unicode.GetBytes(GetMacAddress()));
                 text += array2[3].ToString("X2");
                 text = text + array2[11].ToString("X2") + "-";
             }
             else
             {
-                byte[] array3 = md5.ComputeHash(Encoding.Unicode.GetBytes(text));
+                var array3 = md5.ComputeHash(Encoding.Unicode.GetBytes(text));
                 text += array3[15].ToString("X2");
                 text = text + array3[7].ToString("X2") + "-";
             }
-            if (bool_9)
+            if (motherboard)
             {
-                byte[] array4 = md5.ComputeHash(Encoding.Unicode.GetBytes(GetMotherBoardID()));
+                var array4 = md5.ComputeHash(Encoding.Unicode.GetBytes(GetMotherBoardId()));
                 text += array4[3].ToString("X2");
                 text = text + array4[11].ToString("X2") + "-";
             }
             else
             {
-                byte[] array5 = md5.ComputeHash(Encoding.Unicode.GetBytes(text));
+                var array5 = md5.ComputeHash(Encoding.Unicode.GetBytes(text));
                 text += array5[2].ToString("X2");
                 text = text + array5[14].ToString("X2") + "-";
             }
-            if (bool_10)
+            if (disk)
             {
-                byte[] array6 = md5.ComputeHash(Encoding.Unicode.GetBytes(GetDiskID()));
+                var array6 = md5.ComputeHash(Encoding.Unicode.GetBytes(GetDiskId()));
                 text += array6[3].ToString("X2");
                 text = text + array6[11].ToString("X2") + "-";
             }
             else
             {
-                byte[] array7 = md5.ComputeHash(Encoding.Unicode.GetBytes(text));
+                var array7 = md5.ComputeHash(Encoding.Unicode.GetBytes(text));
                 text += array7[1].ToString("X2");
                 text = text + array7[9].ToString("X2") + "-";
             }
-            byte[] array8 = md5.ComputeHash(Encoding.Unicode.GetBytes(text));
+            var array8 = md5.ComputeHash(Encoding.Unicode.GetBytes(text));
             text += array8[1].ToString("X2");
             return text + array8[9].ToString("X2");
-        }
-        static void Main(string[] args)
-        {
-            bool bool_ = true;
-            bool bool_2 = false;
-            bool bool_3 = true;
-            bool bool_4 = false;
-            string value = GenerateHWID(bool_, bool_2, bool_3, bool_4);
-
-            Console.WriteLine(value);
-            Console.ReadKey();
         }
     }
 }

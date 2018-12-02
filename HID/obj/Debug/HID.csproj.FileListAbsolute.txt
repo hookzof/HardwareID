@@ -1,0 +1,6 @@
+C:\Users\Vitaly\Documents\GitHub\HardwareID\HID\bin\Debug\HID.exe.config
+C:\Users\Vitaly\Documents\GitHub\HardwareID\HID\bin\Debug\HID.exe
+C:\Users\Vitaly\Documents\GitHub\HardwareID\HID\bin\Debug\HID.pdb
+C:\Users\Vitaly\Documents\GitHub\HardwareID\HID\obj\Debug\HID.csproj.CoreCompileInputs.cache
+C:\Users\Vitaly\Documents\GitHub\HardwareID\HID\obj\Debug\HID.exe
+C:\Users\Vitaly\Documents\GitHub\HardwareID\HID\obj\Debug\HID.pdb
